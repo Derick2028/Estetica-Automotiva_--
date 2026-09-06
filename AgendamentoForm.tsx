@@ -1,8 +1,7 @@
-import React, { useRef, useState } from 'react';
-import { Alert, Image, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import React, { useState } from 'react';
+import { Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { parse, isValid, isBefore, startOfDay } from 'date-fns';
 import { Agendamento } from '../utils/types';
-import PlacaCamera from '../features/placa-camera/PlacaCamera';
 
 interface AgendamentoFormProps {
   onAgendamento: (novoAgendamento: Agendamento) => void;
@@ -32,9 +31,6 @@ export default function AgendamentoForm({ agendamentos, onAgendamento, onVoltar,
   const [data, setData] = useState('');
   const [horario, setHorario] = useState('');
   const [tipoLavagem, setTipoLavagem] = useState('');
-  const [cameraAberta, setCameraAberta] = useState(false);
-  const [fotoPlaca, setFotoPlaca] = useState<string | null>(null);
-  const placaInputRef = useRef<TextInput>(null);
 
   const handleLogout = () => {
     Alert.alert('Sair do aplicativo', 'Deseja realmente sair?', [
@@ -74,7 +70,7 @@ export default function AgendamentoForm({ agendamentos, onAgendamento, onVoltar,
     if (horarioOcupado) {
       Alert.alert('Horário indisponível', 'Esse horário já está agendado. Escolha outro.'); return;
     }
-    onAgendamento({ id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`, placa: placaNormalizada, data: dataNormalizada, horario: horarioNormalizado, tipoLavagem: tipoNormalizado, fotoPlaca: fotoPlaca ?? undefined });
+    onAgendamento({ id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`, placa: placaNormalizada, data: dataNormalizada, horario: horarioNormalizado, tipoLavagem: tipoNormalizado });
   };
 
   return (
@@ -82,27 +78,7 @@ export default function AgendamentoForm({ agendamentos, onAgendamento, onVoltar,
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         <Text style={styles.title}>Novo agendamento</Text>
         <Text style={styles.label}>Placa</Text>
-        <View style={styles.plateOptions}>
-          <TouchableOpacity style={[styles.plateOption, styles.plateOptionActive]} onPress={() => placaInputRef.current?.focus()} accessibilityRole="button">
-            <Text style={styles.plateOptionText}>✍️ Digitar placa</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.plateOption} onPress={() => setCameraAberta(true)} accessibilityRole="button">
-            <Text style={styles.plateOptionText}>📷 Fotografar placa</Text>
-          </TouchableOpacity>
-        </View>
-        <TextInput ref={placaInputRef} style={styles.input} value={placa} onChangeText={setPlaca} placeholder="ABC1D23" placeholderTextColor="#777" autoCapitalize="characters" maxLength={7} />
-        {fotoPlaca && (
-          <View style={styles.photoCard}>
-            <Image source={{ uri: fotoPlaca }} style={styles.photoThumb} resizeMode="cover" />
-            <View style={styles.photoInfo}>
-              <Text style={styles.photoTitle}>Foto da placa adicionada</Text>
-              <Text style={styles.photoText}>A foto será vinculada a este agendamento.</Text>
-              <TouchableOpacity onPress={() => setCameraAberta(true)} accessibilityRole="button">
-                <Text style={styles.photoAction}>Tirar outra foto</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        )}
+        <TextInput style={styles.input} value={placa} onChangeText={setPlaca} placeholder="ABC1D23" placeholderTextColor="#777" autoCapitalize="characters" maxLength={7} />
         <Text style={styles.label}>Data</Text>
         <TextInput style={styles.input} value={data} onChangeText={(text) => setData(formatarData(text))} placeholder="DD/MM/AAAA" placeholderTextColor="#777" keyboardType="number-pad" maxLength={10} />
         <Text style={styles.label}>Horário</Text>
@@ -113,8 +89,6 @@ export default function AgendamentoForm({ agendamentos, onAgendamento, onVoltar,
           <Text style={styles.primaryText}>Confirmar agendamento</Text>
         </TouchableOpacity>
       </ScrollView>
-
-      <PlacaCamera visible={cameraAberta} onClose={() => setCameraAberta(false)} onPhotoTaken={setFotoPlaca} />
 
       <View style={styles.bottomBar}>
         <TouchableOpacity style={styles.backButton} onPress={onVoltar} accessibilityRole="button">
@@ -134,17 +108,7 @@ const styles = StyleSheet.create({
   content: { padding: 20, paddingBottom: 30 },
   title: { color: '#ffffff', fontSize: 23, fontWeight: '700', textAlign: 'center', marginBottom: 24 },
   label: { color: '#ffffff', fontSize: 16, marginBottom: 6 },
-  plateOptions: { flexDirection: 'row', gap: 10, marginBottom: 10 },
-  plateOption: { flex: 1, backgroundColor: '#303030', paddingVertical: 12, borderRadius: 9, alignItems: 'center', borderWidth: 1, borderColor: '#444444' },
-  plateOptionActive: { borderColor: '#00aeff' },
-  plateOptionText: { color: '#ffffff', fontSize: 14, fontWeight: '700' },
   input: { height: 48, borderWidth: 1, borderColor: '#333333', borderRadius: 8, paddingHorizontal: 12, color: '#ffffff', backgroundColor: '#161616', marginBottom: 15 },
-  photoCard: { flexDirection: 'row', backgroundColor: '#161616', borderWidth: 1, borderColor: '#2b2b2b', borderRadius: 10, padding: 10, marginBottom: 15 },
-  photoThumb: { width: 92, height: 64, borderRadius: 7, backgroundColor: '#000000' },
-  photoInfo: { flex: 1, marginLeft: 10, justifyContent: 'center' },
-  photoTitle: { color: '#ffffff', fontWeight: '700', marginBottom: 4 },
-  photoText: { color: '#888888', fontSize: 12, lineHeight: 17, marginBottom: 5 },
-  photoAction: { color: '#00aeff', fontWeight: '700', fontSize: 13 },
   primaryButton: { backgroundColor: '#0066cc', paddingVertical: 15, borderRadius: 9, alignItems: 'center', marginTop: 8 },
   primaryText: { color: '#ffffff', fontSize: 16, fontWeight: '700' },
   bottomBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingTop: 10, paddingBottom: 16, backgroundColor: '#000000', borderTopWidth: 1, borderTopColor: '#222222' },
