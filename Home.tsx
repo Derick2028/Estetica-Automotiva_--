@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { Dimensions, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Dimensions, Image, ScrollView, StatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Location from 'expo-location';
 import MapView, { Marker } from 'react-native-maps';
 
@@ -9,9 +10,10 @@ interface HomeProps {
   onAgendar: () => void;
   onVerAgendamentos: () => void;
   onLogout: () => void;
+  onPerfil: () => void;
 }
 
-export default function Home({ onAgendar, onVerAgendamentos, onLogout }: HomeProps) {
+export default function Home({ onAgendar, onVerAgendamentos, onLogout, onPerfil }: HomeProps) {
   const [location, setLocation] = useState<Location.LocationObject | null>(null);
   const [locationDenied, setLocationDenied] = useState(false);
 
@@ -35,12 +37,14 @@ export default function Home({ onAgendar, onVerAgendamentos, onLogout }: HomePro
   }, []);
 
   return (
-    <View style={styles.container}>
-      <ScrollView style={styles.scroll} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+    <SafeAreaView style={styles.safeArea}>
+      <StatusBar barStyle="light-content" backgroundColor="#000000" translucent={false} />
+      <View style={styles.container}>
         <View style={styles.header}>
           <Image source={require('../assets/logo.png')} style={styles.headerLogo} resizeMode="contain" />
         </View>
 
+        <ScrollView style={styles.scroll} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         <Text style={styles.sectionTitle}>Sua localização atual</Text>
         <View style={styles.mapContainer}>
           {location ? (
@@ -72,6 +76,7 @@ export default function Home({ onAgendar, onVerAgendamentos, onLogout }: HomePro
         <TouchableOpacity style={styles.actionButton} onPress={onAgendar} accessibilityRole="button">
           <Text style={styles.actionButtonText}>Novo agendamento</Text>
         </TouchableOpacity>
+        <TouchableOpacity style={styles.actionButton} onPress={onPerfil} accessibilityRole="button"><Text style={styles.actionButtonText}>Meu perfil</Text></TouchableOpacity>
         <TouchableOpacity style={styles.actionButton} onPress={onVerAgendamentos} accessibilityRole="button">
           <Text style={styles.actionButtonText}>Ver agendamentos</Text>
         </TouchableOpacity>
@@ -83,16 +88,18 @@ export default function Home({ onAgendar, onVerAgendamentos, onLogout }: HomePro
           <Text style={styles.logoutText}>Sair do aplicativo</Text>
         </TouchableOpacity>
       </View>
-    </View>
+      </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  safeArea: { flex: 1, backgroundColor: '#000000' },
   container: { flex: 1, backgroundColor: '#0a0a0a' },
   scroll: { flex: 1 },
   content: { paddingBottom: 28 },
-  header: { alignItems: 'center', paddingVertical: 16, backgroundColor: '#000000', borderBottomWidth: 1, borderBottomColor: '#1a1a1a' },
-  headerLogo: { width: width * 0.6, height: 120 },
+  header: { alignItems: 'center', justifyContent: 'center', paddingVertical: 10, backgroundColor: '#000000', borderBottomWidth: 1, borderBottomColor: '#1a1a1a' },
+  headerLogo: { width: Math.min(width * 0.52, 240), height: 82 },
   sectionTitle: { fontSize: 18, fontWeight: 'bold', color: '#ffffff', marginHorizontal: 16, marginTop: 20, marginBottom: 10 },
   mapContainer: { height: 250, marginHorizontal: 16, borderRadius: 12, overflow: 'hidden', borderWidth: 1, borderColor: '#00aeff', marginBottom: 20 },
   map: { width: '100%', height: '100%' },
