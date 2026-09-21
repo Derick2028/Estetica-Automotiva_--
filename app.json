@@ -1,0 +1,62 @@
+{
+  "expo": {
+    "name": "SteticCar",
+    "slug": "app-lavagem-automotiva",
+    "version": "2.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#000000"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSFaceIDUsageDescription": "O SteticCar usa Face ID para autenticar seu acesso com segurança.",
+        "NSLocationWhenInUseUsageDescription": "O SteticCar precisa da sua localização para mapear o local de atendimento."
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#000000"
+      },
+      "permissions": [
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_FINE_LOCATION"
+      ]
+    },
+    "plugins": [
+      [
+        "expo-local-authentication",
+        {
+          "faceIDPermission": "O SteticCar usa o Face ID para confirmar sua identidade e proteger seus agendamentos."
+        }
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "O SteticCar usa a câmera para fotografar a placa do veículo.",
+          "microphonePermission": "O SteticCar não usa o microfone para fotografar a placa.",
+          "recordAudioAndroid": false
+        }
+      ],
+      [
+        "expo-secure-store",
+        {
+          "configureAndroidBackup": true,
+          "faceIDPermission": "O SteticCar usa o Face ID para autenticar seu acesso com segurança."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "O SteticCar usa suas fotos para permitir escolher uma foto de perfil.",
+          "cameraPermission": "O SteticCar usa a câmera para permitir criar uma foto de perfil."
+        }
+      ]
+    ]
+  }
+}

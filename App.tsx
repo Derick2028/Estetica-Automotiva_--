@@ -1,98 +1,62 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Alert, Animated, Dimensions, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import * as LocalAuthentication from 'expo-local-authentication';
-import Home from './page/Home';
-import AgendamentoForm from './page/AgendamentoForm';
-import ListaAgendamentos from './page/ListaAgendamentos';
-import { Agendamento } from './utils/types';
+import React, { useState } from 'react';
+import { Alert } from 'react-native';
+import Login from './telas/autenticacao/Login';
+import PerfilUsuario from './telas/perfil/PerfilUsuario';
+import CadastroCliente from './screens/CadastroCliente';
+import { useEffect } from 'react';
+import { inicializarBanco } from './services/database';
+import Home from './screens/Home';
+import AgendamentoForm from './screens/AgendamentoForm';
+import ListaAgendamentos from './screens/ListaAgendamentos';
+import EditarAgendamento from './screens/EditarAgendamento';
+import { Agendamento } from './services/types';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 
-const { width } = Dimensions.get('window');
-type Screen = 'home' | 'novo' | 'lista';
-
-function FaceIdIcon({ scanning }: { scanning: boolean }) {
-  const scan = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    if (!scanning) return;
-    const animation = Animated.loop(
-      Animated.sequence([
-        Animated.timing(scan, { toValue: 1, duration: 1400, useNativeDriver: true }),
-        Animated.timing(scan, { toValue: 0, duration: 1400, useNativeDriver: true }),
-      ]),
-    );
-    animation.start();
-    return () => animation.stop();
-  }, [scan, scanning]);
-
-  const translateY = scan.interpolate({ inputRange: [0, 1], outputRange: [-42, 42] });
-
-  return (
-    <View style={styles.faceIdIcon}>
-      <View style={[styles.corner, styles.cornerTL]} /><View style={[styles.corner, styles.cornerTR]} />
-      <View style={[styles.corner, styles.cornerBL]} /><View style={[styles.corner, styles.cornerBR]} />
-      <View style={styles.faceOval}>
-        <View style={styles.eyeRow}><View style={styles.eye} /><View style={styles.eye} /></View>
-        <View style={styles.nose} /><View style={styles.mouth} />
-      </View>
-      {scanning && <Animated.View style={[styles.scanLine, { transform: [{ translateY }] }]} />}
-    </View>
-  );
-}
+type Screen = 'login' | 'cadastro' | 'home' | 'novo' | 'lista' | 'editar' | 'perfil';
 
 export default function App() {
-  const [authenticated, setAuthenticated] = useState(false);
-  const [authenticating, setAuthenticating] = useState(false);
-  const [authLabel, setAuthLabel] = useState('Face ID');
-  const authenticatingRef = useRef(false);
-  const [screen, setScreen] = useState<Screen>('home');
+  const [screen, setScreen] = useState<Screen>('login');
+  const [clienteId, setClienteId] = useState<number | null>(null);
   const [agendamentos, setAgendamentos] = useState<Agendamento[]>([]);
-
-  const handleBiometrics = useCallback(async () => {
-    if (authenticatingRef.current) return;
-    authenticatingRef.current = true;
-    setAuthenticating(true);
-
-    try {
-      const hasHardware = await LocalAuthentication.hasHardwareAsync();
-      const isEnrolled = await LocalAuthentication.isEnrolledAsync();
-      const supported = await LocalAuthentication.supportedAuthenticationTypesAsync();
-      const hasFace = supported.includes(LocalAuthentication.AuthenticationType.FACIAL_RECOGNITION);
-      setAuthLabel(hasFace ? 'Face ID' : 'Biometria');
-
-      if (!hasHardware || !isEnrolled) {
-        Alert.alert('Biometria indisponível', 'Cadastre o Face ID, impressão digital ou outra biometria nas configurações do aparelho para entrar no SteticCar.');
-        return;
-      }
-
-      const result = await LocalAuthentication.authenticateAsync({
-        promptMessage: hasFace ? 'Entrar no SteticCar com Face ID' : 'Entrar no SteticCar com biometria',
-        cancelLabel: 'Cancelar',
-        fallbackLabel: 'Usar código do aparelho',
-        disableDeviceFallback: false,
-      });
-
-      if (result.success) {
-        setAuthenticated(true);
-        setScreen('home');
-      } else if (!['user_cancel', 'system_cancel', 'app_cancel'].includes(result.error ?? '')) {
-        Alert.alert('Autenticação não concluída', 'Tente novamente.');
-      }
-    } catch {
-      Alert.alert('Erro na biometria', 'Não foi possível iniciar a autenticação.');
-    } finally {
-      authenticatingRef.current = false;
-      setAuthenticating(false);
-    }
-  }, []);
+  const [agendamentoEmEdicao, setAgendamentoEmEdicao] = useState<Agendamento | null>(null);
 
   useEffect(() => {
-    handleBiometrics();
-  }, [handleBiometrics]);
+    inicializarBanco().catch((error) => console.warn('Não foi possível inicializar o banco local:', error));
+  }, []);
 
-  const logout = () => {
-    setScreen('home');
-    setAuthenticated(false);
-    setAuthLabel('Face ID');
+  const logout = () => { setAgendamentoEmEdicao(null); setClienteId(null); setScreen('login'); };
+  const entrar = (id:number) => { setClienteId(id); setScreen('home'); };
+
+  const abrirEdicao = (agendamento: Agendamento) => {
+    setAgendamentoEmEdicao(agendamento);
+    setScreen('editar');
+  };
+
+  const salvarEdicao = (atualizado: Agendamento) => {
+    setAgendamentos((atual) => atual.map((item) => item.id === atualizado.id ? atualizado : item));
+    setAgendamentoEmEdicao(null);
+    setScreen('lista');
+    Alert.alert('Agendamento atualizado', 'As alterações foram salvas com sucesso.');
+  };
+
+  const cancelarAgendamento = (id: string) => {
+    const agendamento = agendamentos.find((item) => item.id === id);
+    if (!agendamento) return;
+    Alert.alert(
+      'Cancelar agendamento',
+      `Deseja realmente cancelar o agendamento da placa ${agendamento.placa} em ${agendamento.data} às ${agendamento.horario}?`,
+      [
+        { text: 'Não', style: 'cancel' },
+        {
+          text: 'Sim, cancelar',
+          style: 'destructive',
+          onPress: () => {
+            setAgendamentos((atual) => atual.filter((item) => item.id !== id));
+            Alert.alert('Agendamento cancelado', 'O horário foi liberado para um novo agendamento.');
+          },
+        },
+      ],
+    );
   };
 
   const salvarAgendamento = (novo: Agendamento) => {
@@ -101,53 +65,56 @@ export default function App() {
     Alert.alert('Agendamento realizado', 'O agendamento foi salvo e já está disponível em Ver agendamentos.');
   };
 
-  if (!authenticated) {
-    return (
-      <View style={styles.authContainer}>
-        <Image source={require('./assets/logo.png')} style={styles.coverLogo} resizeMode="contain" />
-        <Text style={styles.title}>SteticCar</Text>
-        <Text style={styles.subtitle}>ESTÉTICA AUTOMOTIVA</Text>
-        <View style={styles.faceIdCard}>
-          <FaceIdIcon scanning={authenticating} />
-          <Text style={styles.faceIdTitle}>{authenticating ? `Aguardando ${authLabel}...` : `Entrar com ${authLabel}`}</Text>
-          <Text style={styles.faceIdSubtitle}>Use o Face ID ou a biometria cadastrada no aparelho para entrar.</Text>
-        </View>
-        <TouchableOpacity style={[styles.authButton, authenticating && styles.authButtonDisabled]} onPress={handleBiometrics} disabled={authenticating}>
-          <Text style={styles.authButtonText}>{authenticating ? 'Autenticando...' : `Usar ${authLabel}`}</Text>
-        </TouchableOpacity>
-      </View>
-    );
-  }
-
-  if (screen === 'novo') {
-    return <AgendamentoForm agendamentos={agendamentos} onAgendamento={salvarAgendamento} onVoltar={() => setScreen('home')} onLogout={logout} />;
-  }
-
-  if (screen === 'lista') {
-    return <ListaAgendamentos agendamentos={agendamentos} onVoltar={() => setScreen('home')} onNovoAgendamento={() => setScreen('novo')} onLogout={logout} />;
-  }
-
-  return <Home onAgendar={() => setScreen('novo')} onVerAgendamentos={() => setScreen('lista')} onLogout={logout} />;
+  return (
+    <SafeAreaProvider>
+      {screen === 'login' && (
+        <Login
+          onEnter={entrar}
+          onCadastro={() => setScreen('cadastro')}
+        />
+      )}
+      {screen === 'cadastro' && (
+        <CadastroCliente
+          onCadastroConcluido={entrar}
+          onVoltar={() => setScreen('login')}
+        />
+      )}
+      {screen === 'novo' && (
+        <AgendamentoForm
+          agendamentos={agendamentos}
+          onAgendamento={salvarAgendamento}
+          onVoltar={() => setScreen('home')}
+          onLogout={logout}
+        />
+      )}
+      {screen === 'lista' && (
+        <ListaAgendamentos
+          agendamentos={agendamentos}
+          onVoltar={() => setScreen('home')}
+          onNovoAgendamento={() => setScreen('novo')}
+          onLogout={logout}
+          onEditar={abrirEdicao}
+          onCancelar={cancelarAgendamento}
+        />
+      )}
+      {screen === 'editar' && agendamentoEmEdicao && (
+        <EditarAgendamento
+          agendamento={agendamentoEmEdicao}
+          agendamentos={agendamentos}
+          onSalvar={salvarEdicao}
+          onVoltar={() => { setAgendamentoEmEdicao(null); setScreen('lista'); }}
+          onLogout={logout}
+        />
+      )}
+      {screen === 'perfil' && clienteId && <PerfilUsuario clienteId={clienteId} onVoltar={() => setScreen('home')} />}
+      {screen === 'home' && (
+        <Home
+          onAgendar={() => setScreen('novo')}
+          onVerAgendamentos={() => setScreen('lista')}
+          onLogout={logout}
+          onPerfil={() => setScreen('perfil')}
+        />
+      )}
+    </SafeAreaProvider>
+  );
 }
-
-const styles = StyleSheet.create({
-  authContainer: { flex: 1, backgroundColor: '#000000', alignItems: 'center', justifyContent: 'center', padding: 20 },
-  coverLogo: { width: width * 0.58, height: width * 0.42, marginBottom: 4 },
-  title: { fontSize: 32, fontWeight: 'bold', color: '#ffffff', marginTop: 6 },
-  subtitle: { fontSize: 14, color: '#00aeff', letterSpacing: 2, marginBottom: 18, fontWeight: '600' },
-  faceIdCard: { width: '100%', maxWidth: 360, alignItems: 'center', backgroundColor: '#0c0c0c', borderWidth: 1, borderColor: '#1e1e1e', borderRadius: 20, paddingVertical: 22, paddingHorizontal: 18, marginBottom: 18 },
-  faceIdIcon: { width: 130, height: 130, alignItems: 'center', justifyContent: 'center', marginBottom: 14, overflow: 'hidden' },
-  corner: { position: 'absolute', width: 28, height: 28, borderColor: '#00aeff' },
-  cornerTL: { top: 2, left: 2, borderTopWidth: 3, borderLeftWidth: 3, borderTopLeftRadius: 10 },
-  cornerTR: { top: 2, right: 2, borderTopWidth: 3, borderRightWidth: 3, borderTopRightRadius: 10 },
-  cornerBL: { bottom: 2, left: 2, borderBottomWidth: 3, borderLeftWidth: 3, borderBottomLeftRadius: 10 },
-  cornerBR: { bottom: 2, right: 2, borderBottomWidth: 3, borderRightWidth: 3, borderBottomRightRadius: 10 },
-  faceOval: { width: 64, height: 82, borderWidth: 2, borderColor: '#00aeff', borderRadius: 34, alignItems: 'center', paddingTop: 26 },
-  eyeRow: { flexDirection: 'row', gap: 18 }, eye: { width: 5, height: 5, borderRadius: 3, backgroundColor: '#00aeff' },
-  nose: { width: 2, height: 14, backgroundColor: '#00aeff', marginTop: 4 }, mouth: { width: 20, height: 7, borderBottomWidth: 2, borderColor: '#00aeff', borderRadius: 12, marginTop: 1 },
-  scanLine: { position: 'absolute', left: 18, right: 18, height: 2, backgroundColor: '#00aeff', opacity: 0.9 },
-  faceIdTitle: { color: '#ffffff', fontSize: 19, fontWeight: '700', marginBottom: 7, textAlign: 'center' },
-  faceIdSubtitle: { color: '#888888', fontSize: 13, textAlign: 'center', lineHeight: 19 },
-  authButton: { width: '100%', maxWidth: 360, backgroundColor: '#0066cc', paddingVertical: 15, borderRadius: 10, borderWidth: 1, borderColor: '#00aeff', alignItems: 'center' },
-  authButtonDisabled: { opacity: 0.65 }, authButtonText: { color: '#ffffff', fontSize: 16, fontWeight: '700' },
-});
