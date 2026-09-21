@@ -1,5 +1,5 @@
 import React, { useRef, useState } from 'react';
-import { Alert, Image, Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, Image, Modal, StatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import * as ImageManipulator from 'expo-image-manipulator';
 
@@ -8,11 +8,6 @@ interface PlacaCameraProps {
   onClose: () => void;
   onPhotoTaken: (uri: string) => void;
 }
-
-/**
- * Câmera guiada para placa.
- * A moldura indica a área que será mantida no recorte automático.
- */
 export default function PlacaCamera({ visible, onClose, onPhotoTaken }: PlacaCameraProps) {
   const [permission, requestPermission] = useCameraPermissions();
   const [photoUri, setPhotoUri] = useState<string | null>(null);
@@ -39,9 +34,6 @@ export default function PlacaCamera({ visible, onClose, onPhotoTaken }: PlacaCam
         Alert.alert('Foto não capturada', 'Não foi possível capturar a placa. Tente novamente.');
         return;
       }
-
-      // Recorte automático centralizado: corresponde à área indicada pela moldura.
-      // O usuário deve deixar somente a placa dentro da moldura antes de fotografar.
       const cropWidth = Math.round(foto.width * 0.82);
       const cropHeight = Math.min(Math.round(foto.height * 0.22), Math.round(cropWidth * 0.38));
       const originX = Math.max(0, Math.round((foto.width - cropWidth) / 2));
@@ -69,6 +61,7 @@ export default function PlacaCamera({ visible, onClose, onPhotoTaken }: PlacaCam
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={fechar}>
       <View style={styles.container}>
+        <StatusBar barStyle="light-content" backgroundColor="#000000" translucent={false} />
         {photoUri ? (
           <>
             <Image source={{ uri: photoUri }} style={styles.preview} resizeMode="contain" />
@@ -100,7 +93,7 @@ export default function PlacaCamera({ visible, onClose, onPhotoTaken }: PlacaCam
             <CameraView ref={cameraRef} style={styles.camera} facing="back" />
             <View style={styles.guide} pointerEvents="none">
               <View style={styles.guideBox} />
-              <Text style={styles.guideText}>Enquadre somente a placa dentro da moldura</Text>
+              <Text style={styles.guideText}>Centralize somente a placa dentro da moldura</Text>
             </View>
             <View style={styles.cameraActions}>
               <TouchableOpacity style={styles.cancelButton} onPress={fechar} accessibilityRole="button">
